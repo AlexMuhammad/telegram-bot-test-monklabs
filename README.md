@@ -33,8 +33,8 @@ A Telegram bot that provides cryptocurrency token information, price data, and A
 1. Clone the repository:
 
    ```bash
-   git clone https://github.com/yourusername/telegram-token-ai-assistant.git
-   cd telegram-token-ai-assistant
+   git clone https://github.com/AlexMuhammad/telegram-bot-test-monklabs.git
+   cd telegram-bot-test-monklabs
    ```
 
 2. Install dependencies:
