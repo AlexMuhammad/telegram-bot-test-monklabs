@@ -20,8 +20,6 @@ export class TelegramBotClient {
       try {
         const result = await this.aiRepository.routeFunction(text);
 
-        console.log("Routing function:", result.function);
-
         if (result.function === "handlePriceQuery") {
           return await handlers.handlePriceQuery(ctx, result.args[0]);
         } else if (result.function === "handleTokenAddress") {

@@ -284,7 +284,7 @@ Respond as a trusted advisor, focusing on providing factual, data-driven insight
   }
 
   async extractTokenSymbols(text: string, tokenList: any[]): Promise<string[]> {
-    const tokenSymbols = tokenList.map((token: any) => token.symbol);
+    const tokenSymbols = tokenList.map((token: any) => token?.symbol);
 
     try {
       const prompt = `
