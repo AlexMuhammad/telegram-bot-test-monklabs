@@ -82,7 +82,6 @@ export class TelegramHandlers {
   }
 
   async handleGeneralQuestion(ctx: Context, question: string): Promise<void> {
-    console.log("question", question);
     const cacheKey = `bot_response_question_${question}`;
     const cachedResponse = getCachedData<string>(cacheKey);
     if (cachedResponse) {
@@ -92,6 +91,7 @@ export class TelegramHandlers {
     }
     if (!question) return;
     try {
+      await ctx.replyWithChatAction("typing");
       const response = await this.tokenService.getGeneralResponse(question);
       setCachedData(cacheKey, response, 300);
       await ctx.reply(response);
@@ -107,7 +107,7 @@ export class TelegramHandlers {
     const response = `Helping you with your crypto needs!
     - Send a token contract address (e.g., 0x123...) to get token details, AI insights, and security score.
     - Ask for token price (e.g., "What's the price of $PEPE?") for current price and market data.
-    - For any other queries, I'll do my best to assist you.
+    - For any other queries especially related to crypto, I'll do my best to assist you.
     `;
     await ctx.reply(response);
   }
