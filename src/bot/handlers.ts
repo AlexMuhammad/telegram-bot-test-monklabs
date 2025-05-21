@@ -158,7 +158,7 @@ export class TelegramHandlers {
 
       if (tokenSymbols.length < 2) {
         await ctx.reply(
-          "Please specify your token mention, dont forget to add `$` sign."
+          "Please specify your token mention (e.g: $popcat) to get valid information"
         );
         return;
       }
@@ -170,7 +170,7 @@ export class TelegramHandlers {
 
       console.log("comparison", comparison);
 
-      const response = `📊 Token Comparison\n\n${comparison}\n\n⚠️ *This comparison is based on real-time on-chain data. Not financial advice.*`;
+      const response = `📊 Token Comparison\n\n${comparison}\n\n`;
 
       await ctx.reply(response);
     } catch (error) {
