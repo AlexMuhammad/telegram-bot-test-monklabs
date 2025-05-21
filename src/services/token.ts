@@ -202,8 +202,8 @@ export class TokenService {
 
   async getMarketTrends(): Promise<string> {
     try {
-      // Get market trends from AI
-      const trends = await this.aiRepository.analyzeMarketTrends();
+      const data = await this.coinGeckoRepository.getTrendingTokens();
+      const trends = await this.aiRepository.analyzeMarketTrends(data);
 
       return trends;
     } catch (error) {

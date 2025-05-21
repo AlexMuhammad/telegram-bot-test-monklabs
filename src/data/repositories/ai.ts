@@ -250,9 +250,14 @@ Respond as a trusted advisor, focusing on providing factual, data-driven insight
     }
   }
 
-  async analyzeMarketTrends(): Promise<string> {
+  async analyzeMarketTrends(data: any): Promise<string> {
+    const trendingTokens = data.map((token: any) => {
+      return `- ${JSON.stringify(token.item)}`;
+    });
+
     const prompt = `
-      Analyze the current market trends and conditions.
+      Analyze the current market trends and conditions based on the following trending tokens data:
+      ${trendingTokens}
       
       Provide an overview of the overall market sentiment, including:
       1. Key metrics (e.g., total market cap, total 24h volume)
@@ -333,11 +338,8 @@ ${tokenSymbols.join(", ")}
       .map(
         (token) =>
           `- ${token.dexScreener?.symbol}:
-              Price: ${token.dexScreener?.price}
-              24h Volume: ${token.dexScreener?.volume24h}
-              Liquidity: ${token.dexScreener?.liquidity}
-              24h Txns: ${token.dexScreener?.txns24h}
-              market Cap: ${token.coinGecko?.marketCap}
+              ${JSON.stringify(token.dexScreener)}
+              ${JSON.stringify(token.coinGecko)}
               `
       )
       .join("\n");
@@ -345,12 +347,15 @@ ${tokenSymbols.join(", ")}
     const prompt = `
       Answer the following question about the token: "${question}"
       
-      Provide a detailed response considering the token's:
+      If the user is specifically asking for the contract address, provide only that information.
+      
+      Otherwise, provide a detailed response considering the token's:
       1. Current price and performance metrics
       2. What problem it solves or its unique value proposition
       3. Why it might be interesting to watch based on the on-chain data
       4. Any risks or red flags to consider
-      5. based on this ${tokenInfo}
+      
+      Base your response on this data: ${tokenInfo}
       
       Keep your response under 2500 characters and maintain an educational tone without making investment recommendations.
     `;

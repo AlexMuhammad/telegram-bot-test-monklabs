@@ -130,7 +130,7 @@ export class TelegramHandlers {
       }
 
       const recommendations = await this.tokenService.getTokenRecommendations();
-      const response = `🔍 Token Recommendations: \n\n${recommendations}`;
+      const response = `${recommendations}`;
       setCachedData(cacheKey, response, 7200);
 
       await ctx.reply(response);
@@ -198,7 +198,7 @@ export class TelegramHandlers {
 
       const trends = await this.tokenService.getMarketTrends();
 
-      const response = `📈 Today's Crypto Market Trends\n\n${trends}\n\n⚠️ *This analysis is based on real-time market data. Not financial advice.*`;
+      const response = `${trends}`;
       setCachedData(cacheKey, response, 3600);
 
       await ctx.reply(response);
@@ -219,8 +219,6 @@ export class TelegramHandlers {
         question,
         tokenList
       );
-
-      console.log("tokenMentions", tokenMentions);
 
       let response: string;
 
@@ -254,13 +252,13 @@ export class TelegramHandlers {
               validTokensData.map((data) => data.symbol),
               question
             );
-            response = `📊 Token Comparison\n\n${response}`;
+            response = `${response}`;
           } else {
             response = await this.tokenService.answerTokenQuestion(
               question,
               validTokensData
             );
-            response = `🔍 Token Analysis\n\n${response}`;
+            response = `${response}`;
           }
         } else {
           response = await this.tokenService.getGeneralResponse(question);
