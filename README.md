@@ -132,18 +132,28 @@ The bot uses LangChain with Google's Gemini model for AI-powered features:
 ### Function Routing Prompt
 
 ```typescript
-const prompt = `
-You are a function router for a Telegram bot. Based on the user's message, determine which function should be called:
+  const prompt = `
+  You are a function router for a Telegram bot. Based on the user's message, determine which function should be called:
 
-- Use "handlePriceQuery" when the user asks for the price of a token, e.g., "$BTC", "What's the price of $ETH?", or even just sends a token symbol or name (e.g., "SOL", "bonk", "dogwifhat"). Be optimistic — if it sounds like a token or coin name, assume it's a price query. Always return the token symbol WITHOUT the "$" sign.
-- Use "handleTokenAddress" when the user sends a blockchain token address. This could be:
-  - Ethereum address (starts with "0x", 42 characters)
-  - Solana address (base58 string, usually 32–44 characters)
+  - Use "handlePriceQuery" when the user asks for the price of a token, e.g., "$BTC", "What's the price of $ETH?", or even just sends a token symbol or name (e.g., "SOL", "bonk", "dogwifhat"). Always return the token symbol WITHOUT the "$" sign.
 
-Respond ONLY with a raw JSON object like this:
-{ "function": "handlePriceQuery", "args": ["BTC"] }
+  - Use "handleTokenAddress" when the user sends a blockchain token address. This could be:
+    - Ethereum address (starts with "0x", 42 characters)
+    - Solana address (base58 string, usually 32–44 characters)
 
-User Message: ${userMessage}
+  - Use "handleMarketTrends" when the user asks about overall market conditions, trends, or sentiment. Examples: "How is the market today?", "What's the crypto market looking like?", "Market analysis", "Market overview", etc.
+
+  - Use "handleTokenRecommendation" when the user asks for token recommendations or suggestions in a specific category. Examples: "What are good DeFi tokens?", "Suggest some gaming tokens", "Best L1 alternatives", "Recommend NFT tokens", etc. Return the category as the argument (e.g., "DeFi", "Gaming", "L1", "NFT").
+
+  - Use "handleTokenComparison" when the user wants to compare specific tokens or there are elements of comparison in the query. Examples: "Compare BTC and ETH", "Which is better, SOL or AVAX?", "BNB vs ETH", "Is MATIC outperforming ADA?", "How does LINK stack up against other oracle tokens?", etc. Return the full query as the argument.
+
+  - Use "handleGeneralQuestion" for all other questions about specific tokens, crypto markets, or investment strategies. Examples include "Is X a good investment?", "Tell me about X token", "How does liquidity affect token price?", "What's happening with X token?", etc. Return the full question as the argument.
+
+  Respond ONLY with a raw JSON object like this:
+  { "function": "handlePriceQuery", "args": ["BTC"] }
+
+  User Message: ${userMessage}
+  `.trim(); Message: ${userMessage}
 `;
 ```
 
@@ -193,6 +203,84 @@ Format: [Percentage]%: [Reason]
 `;
 ```
 
+### Market Trends Prompt
+
+```typescript
+const prompt = `
+Analyze the current market trends and conditions based on the following trending tokens data:
+${trendingTokens}
+
+Provide an overview of the overall market sentiment, including:
+1. Key metrics (e.g., total market cap, total 24h volume)
+2. Major trends (bullish, bearish, sideways)
+3. Notable events or news affecting the market
+4. Any emerging trends or technologies
+
+Keep your response under 2500 characters and maintain an educational tone without making investment recommendations.
+`;
+```
+
+### Token Recommendation Prompt
+
+```typescript
+const prompt = `
+As a cryptocurrency expert, suggest 3-5 notable tokens based on the following real-time market data:
+${trendingTokens}
+
+For each recommended token, provide:
+1. Token name and ticker
+2. Current price (in BTC) and market cap rank
+3. Its unique value proposition or problem it solves
+4. Why it's noteworthy based on the provided data
+
+Prioritize tokens that appear in the trending data. If not enough relevant tokens are trending, suggest well-known tokens.
+
+Keep your response under 2000 characters. Use a concise, informative tone without making investment recommendations.
+`;
+```
+
+### Token Comparison Prompt
+
+```typescript
+const prompt = `
+Compare the following tokens based on the user's query: "${query}"
+
+TOKEN DATA:
+${tokensData
+  .map(
+    (token) =>
+      `- ${token.symbol}:
+        Price: ${token.coinGecko?.price ?? "N/A"}
+        24h Volume: ${token.coinGecko?.volume24h ?? "N/A"}
+        Liquidity: ${token.dexScreener?.liquidity ?? "N/A"}
+        24h Txns: ${token.dexScreener?.txns24h ?? "N/A"}`
+  )
+  .join("\n")}
+
+Focus on the key aspects mentioned in the user's query. Consider factors like price, volume, liquidity, and transaction activity. Provide a balanced view, mentioning both strengths and potential risks.
+
+Keep your response under 2500 characters and maintain an educational tone without making investment recommendations.
+`;
+```
+
+### General Question Prompt
+
+```typescript
+const prompt = `
+Answer the following question about the token: "${question}"
+
+If the user is specifically asking for the contract address, provide only that information.
+
+Otherwise, provide a detailed response considering the token's:
+1. Current price and performance metrics
+2. What problem it solves or its unique value proposition
+3. Why it might be interesting to watch based on the on-chain data
+4. Any risks or red flags to consider
+
+Keep your response under 2500 characters and maintain an educational tone without making investment recommendations.
+`;
+```
+
 ## Database Schema
 
 ### QueryLog Table
@@ -223,21 +311,7 @@ The bot uses a two-level caching strategy:
 1. **In-memory cache**: Fast access for frequently requested tokens
 2. **Database cache**: Persistent storage for historical queries
 
-Cache keys are structured as:
-
-- `token_address_{address}` - For token address lookups
-- `token_symbol_{symbol}` - For token symbol lookups
-- `bot_response_{type}_{query}` - For bot responses (e.g., price, analysis)
-
 Default TTL is 10 minutes (600 seconds) to balance freshness with API efficiency.
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-## License
-
-This project is licensed under the ISC License - see the LICENSE file for details.
 
 ## Docker Deployment
 

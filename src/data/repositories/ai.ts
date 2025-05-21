@@ -114,7 +114,7 @@ Respond as a trusted advisor, focusing on providing factual, data-driven insight
     function:
       | "handlePriceQuery"
       | "handleTokenAddress"
-      | "handleTokenQuestion"
+      | "handleGeneralQuestion"
       | "handleMarketTrends"
       | "handleTokenRecommendation"
       | "handleTokenComparison";
@@ -135,7 +135,7 @@ Respond as a trusted advisor, focusing on providing factual, data-driven insight
   
   - Use "handleTokenComparison" when the user wants to compare specific tokens or there are elements of comparison in the query. Examples: "Compare BTC and ETH", "Which is better, SOL or AVAX?", "BNB vs ETH", "Is MATIC outperforming ADA?", "How does LINK stack up against other oracle tokens?", etc. Return the full query as the argument.
   
-  - Use "handleTokenQuestion" for all other questions about specific tokens, crypto markets, or investment strategies. Examples include "Is X a good investment?", "Tell me about X token", "How does liquidity affect token price?", "What's happening with X token?", etc. Return the full question as the argument.
+  - Use "handleGeneralQuestion" for all other questions about specific tokens, crypto markets, or investment strategies. Examples include "Is X a good investment?", "Tell me about X token", "How does liquidity affect token price?", "What's happening with X token?", etc. Return the full question as the argument.
   
   Respond ONLY with a raw JSON object like this:
   { "function": "handlePriceQuery", "args": ["BTC"] }
@@ -157,7 +157,7 @@ Respond as a trusted advisor, focusing on providing factual, data-driven insight
         function:
           | "handlePriceQuery"
           | "handleTokenAddress"
-          | "handleTokenQuestion"
+          | "handleGeneralQuestion"
           | "handleMarketTrends"
           | "handleTokenRecommendation"
           | "handleTokenComparison";
@@ -166,7 +166,7 @@ Respond as a trusted advisor, focusing on providing factual, data-driven insight
       return json;
     } catch (error) {
       console.error("Failed to route function via Gemini:", error);
-      return { function: "handleTokenQuestion", args: [userMessage] };
+      return { function: "handleGeneralQuestion", args: [userMessage] };
     }
   }
 

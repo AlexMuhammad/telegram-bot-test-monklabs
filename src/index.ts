@@ -40,7 +40,9 @@ const telegramBot = new TelegramBotClient(telegramHandlers);
 
 // Register routes
 fastify.register(async (instance) => {
-  instance.get("/", async () => ({ status: "OK" }));
+  instance.get("/", async () => {
+    return repositories.queryLog.getRecentQueries("general");
+  });
 
   instance.get("/analyze", async (request) => {
     const { tokenAddress, tokenId } = request.query as {

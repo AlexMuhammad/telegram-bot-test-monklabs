@@ -35,7 +35,7 @@ export class QueryLogRepository {
   }
 
   async getRecentQueries(
-    type: "analyze" | "price",
+    type: "analyze" | "price" | "general",
     tokenAddress?: string,
     tokenId?: string | undefined
   ): Promise<any[]> {

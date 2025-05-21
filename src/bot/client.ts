@@ -32,8 +32,8 @@ export class TelegramBotClient {
           return await handlers.handleTokenRecommendation(ctx, result.args[0]);
         } else if (result.function === "handleTokenComparison") {
           return await handlers.handleTokenComparison(ctx, result.args[0]);
-        } else if (result.function === "handleTokenQuestion") {
-          return await handlers.handleTokenQuestion(ctx, result.args[0]);
+        } else if (result.function === "handleGeneralQuestion") {
+          return await handlers.handleGeneralQuestion(ctx, result.args[0]);
         } else {
           await ctx.reply("Sorry, I couldn't understand your message.");
         }

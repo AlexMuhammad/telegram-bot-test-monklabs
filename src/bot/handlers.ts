@@ -18,6 +18,7 @@ export class TelegramHandlers {
     }
     if (!address) return;
     try {
+      await ctx.replyWithChatAction("typing");
       const token = await this.tokenService.getTokenByAddress(address, payload);
       if (!token) {
         await ctx.reply(
@@ -61,6 +62,7 @@ export class TelegramHandlers {
     }
 
     try {
+      await ctx.replyWithChatAction("typing");
       const token = await this.tokenService.getTokenBySymbol(symbol, payload);
       if (!token) {
         await ctx.reply("Token not found or invalid symbol, Please try again.");
@@ -81,33 +83,17 @@ export class TelegramHandlers {
     }
   }
 
-  async handleGeneralQuestion(ctx: Context, question: string): Promise<void> {
-    const cacheKey = `bot_response_question_${question}`;
-    const cachedResponse = getCachedData<string>(cacheKey);
-    if (cachedResponse) {
-      logger.info(`Cache hit for bot response: ${cacheKey}`);
-      await ctx.reply(cachedResponse);
-      return;
-    }
-    if (!question) return;
-    try {
-      await ctx.replyWithChatAction("typing");
-      const response = await this.tokenService.getGeneralResponse(question);
-      setCachedData(cacheKey, response, 300);
-      await ctx.reply(response);
-    } catch (error) {
-      await ctx.reply((error as Error).message || "An error occurred.");
-    }
-  }
-
   async handleStart(ctx: Context): Promise<void> {
     await ctx.reply("Welcome to my space!");
   }
   async handleHelp(ctx: Context): Promise<void> {
-    const response = `Helping you with your crypto needs!
-    - Send a token contract address (e.g., 0x123...) to get token details, AI insights, and security score.
-    - Ask for token price (e.g., "What's the price of $PEPE?") for current price and market data.
-    - For any other queries especially related to crypto, I'll do my best to assist you.
+    const response = `Welcome to your Crypto AI Assistant! Here's how I can help:
+    - Send a token contract address (e.g., 0x123...) for detailed token analysis, AI insights, and security score.
+    - Ask about token prices (e.g., "What's the price of $PEPE?") for current market data.
+    - Request token recommendations (e.g., "Suggest some DeFi tokens").
+    - Compare tokens (e.g., "Compare BTC and ETH").
+    - Get market trends (e.g., "How is the crypto market today?").
+    - Ask any crypto-related questions, and I'll provide informed answers.
     `;
     await ctx.reply(response);
   }
@@ -118,7 +104,7 @@ export class TelegramHandlers {
   ): Promise<void> {
     try {
       await ctx.replyWithChatAction("typing");
-      const cacheKey = `token_recommendation_${category
+      const cacheKey = `bot_response_recommendation_${category
         .toLowerCase()
         .replace(/\s+/g, "_")}`;
       const cachedResponse = getCachedData<string>(cacheKey);
@@ -129,7 +115,9 @@ export class TelegramHandlers {
         return;
       }
 
-      const recommendations = await this.tokenService.getTokenRecommendations();
+      const recommendations = await this.tokenService.getTokenRecommendations(
+        ctx.message
+      );
       const response = `${recommendations}`;
       setCachedData(cacheKey, response, 7200);
 
@@ -147,14 +135,23 @@ export class TelegramHandlers {
 
   async handleTokenComparison(ctx: Context, query: string): Promise<void> {
     try {
+      const cacheKey = `bot_response_comparison_${query
+        .toLowerCase()
+        .replace(/\s+/g, "_")}`;
+      const cachedResponse = getCachedData<string>(cacheKey);
+
+      if (cachedResponse) {
+        logger.info(`Cache hit for token comparison: ${query}`);
+        await ctx.reply(cachedResponse);
+        return;
+      }
+
       await ctx.replyWithChatAction("typing");
       const tokenList = await this.tokenService.getTokenList();
       const tokenSymbols = await this.tokenService.extractTokenSymbols(
         query,
         tokenList
       );
-
-      console.log("tokenSymbols", tokenSymbols);
 
       if (tokenSymbols.length < 2) {
         await ctx.reply(
@@ -165,12 +162,13 @@ export class TelegramHandlers {
 
       const comparison = await this.tokenService.compareTokens(
         tokenSymbols,
-        query
+        query,
+        ctx.message
       );
 
-      console.log("comparison", comparison);
+      const response = `${comparison}`;
 
-      const response = `📊 Token Comparison\n\n${comparison}\n\n`;
+      setCachedData(cacheKey, response, 3600);
 
       await ctx.reply(response);
     } catch (error) {
@@ -185,7 +183,7 @@ export class TelegramHandlers {
     try {
       await ctx.replyWithChatAction("typing");
 
-      const cacheKey = `market_trends_${
+      const cacheKey = `bot_response_market_trends_${
         new Date().toISOString().split("T")[0]
       }`;
       const cachedResponse = getCachedData<string>(cacheKey);
@@ -196,7 +194,7 @@ export class TelegramHandlers {
         return;
       }
 
-      const trends = await this.tokenService.getMarketTrends();
+      const trends = await this.tokenService.getMarketTrends(ctx.message);
 
       const response = `${trends}`;
       setCachedData(cacheKey, response, 3600);
@@ -210,10 +208,20 @@ export class TelegramHandlers {
     }
   }
 
-  async handleTokenQuestion(ctx: Context, question: string): Promise<void> {
+  async handleGeneralQuestion(ctx: Context, question: string): Promise<void> {
     try {
       await ctx.replyWithChatAction("typing");
 
+      const cacheKey = `bot_response_general_${question
+        .toLowerCase()
+        .replace(/\s+/g, "_")}`;
+      const cachedResponse = getCachedData<string>(cacheKey);
+
+      if (cachedResponse) {
+        logger.info(`Cache hit for general question: ${cacheKey}`);
+        await ctx.reply(cachedResponse);
+        return;
+      }
       const tokenList = await this.tokenService.getTokenList();
       const tokenMentions = await this.tokenService.extractTokenSymbols(
         question,
@@ -250,22 +258,32 @@ export class TelegramHandlers {
           ) {
             response = await this.tokenService.compareTokens(
               validTokensData.map((data) => data.symbol),
-              question
+              question,
+              ctx.message
             );
             response = `${response}`;
           } else {
             response = await this.tokenService.answerTokenQuestion(
               question,
-              validTokensData
+              validTokensData,
+              ctx.message
             );
             response = `${response}`;
           }
         } else {
-          response = await this.tokenService.getGeneralResponse(question);
+          response = await this.tokenService.getGeneralResponse(
+            question,
+            ctx.message
+          );
         }
       } else {
-        response = await this.tokenService.getGeneralResponse(question);
+        response = await this.tokenService.getGeneralResponse(
+          question,
+          ctx.message
+        );
       }
+
+      setCachedData(cacheKey, response, 3600);
 
       await ctx.reply(response);
     } catch (error) {

@@ -7,6 +7,7 @@ import { CoinGeckoToken, DexScreenerToken, Token } from "../data/types";
 import { logger } from "../utils/logger";
 import { validators } from "../utils/validators";
 import { getCachedData, setCachedData } from "./cache";
+import { Context } from "grammy";
 
 export class TokenService {
   constructor(
@@ -140,20 +141,80 @@ export class TokenService {
     return token;
   }
 
-  async getGeneralResponse(question: string): Promise<any> {
+  async getGeneralResponse(question: string, payload: any): Promise<any> {
     const response = await this.aiRepository.generalQuestionAboutCrypto(
       question
     );
 
+    const cacheKey = `general_response_${question
+      .toLowerCase()
+      .replace(/\s+/g, "_")}`;
+    const cachedToken = getCachedData<string>(cacheKey);
+    if (cachedToken) {
+      logger.info(`Cache hit for general response: ${cacheKey}`);
+      await this.logQuery({
+        userId: payload.from.id.toString(),
+        response: cachedToken,
+        command: "general",
+        tokenAddress: undefined,
+        chainId: undefined,
+        tokenId: undefined,
+        tokenName: undefined,
+      });
+      return cachedToken;
+    }
+
+    await this.logQuery({
+      userId: payload.from.id.toString(),
+      response,
+      command: "general",
+      tokenAddress: undefined,
+      chainId: undefined,
+      tokenId: undefined,
+      tokenName: undefined,
+    });
+
+    setCachedData(cacheKey, response, 300);
+
     return response;
   }
 
-  async getTokenRecommendations(): Promise<string> {
+  async getTokenRecommendations(payload: any): Promise<string> {
     try {
       const trendingTokens = await this.coinGeckoRepository.getTrendingTokens();
       const recommendations = await this.aiRepository.suggestTokens({
         trendingTokens,
       });
+
+      const cacheKey = `token_recommendations_${recommendations
+        .toLowerCase()
+        .replace(/\s+/g, "_")}`;
+      const cachedToken = getCachedData<string>(cacheKey);
+      if (cachedToken) {
+        logger.info(`Cache hit for token recommendations: ${cacheKey}`);
+        await this.logQuery({
+          userId: payload.from.id.toString(),
+          response: cachedToken,
+          command: "general",
+          tokenAddress: undefined,
+          chainId: undefined,
+          tokenId: undefined,
+          tokenName: undefined,
+        });
+        return cachedToken;
+      }
+
+      await this.logQuery({
+        userId: payload.from.id.toString(),
+        response: recommendations,
+        command: "general",
+        tokenAddress: undefined,
+        chainId: undefined,
+        tokenId: undefined,
+        tokenName: undefined,
+      });
+
+      setCachedData(cacheKey, recommendations, 300);
 
       return recommendations;
     } catch (error) {
@@ -162,10 +223,30 @@ export class TokenService {
     }
   }
 
-  async compareTokens(symbols: string[], query: string): Promise<string> {
+  async compareTokens(
+    symbols: string[],
+    query: string,
+    payload: any
+  ): Promise<string> {
     try {
-      console.log("symbols", symbols);
-      // Get data for each token
+      const cacheKey = `token_comparison_${query
+        .toLowerCase()
+        .replace(/\s+/g, "_")}`;
+      const cachedToken = getCachedData<string>(cacheKey);
+      if (cachedToken) {
+        logger.info(`Cache hit for token comparison: ${cacheKey}`);
+        await this.logQuery({
+          userId: payload.from.id.toString(),
+          response: cachedToken,
+          command: "general",
+          tokenAddress: undefined,
+          chainId: undefined,
+          tokenId: undefined,
+          tokenName: undefined,
+        });
+        return cachedToken;
+      }
+
       const tokensData = await Promise.all(
         symbols.map(async (symbol) => {
           const dexScreener = await this.dexscreenerRepository.getTokenBySymbol(
@@ -178,7 +259,6 @@ export class TokenService {
         })
       );
 
-      // Filter out tokens with no data
       const validTokensData = tokensData.filter(
         (data) => data.dexScreener !== null || data.coinGecko !== null
       );
@@ -187,11 +267,22 @@ export class TokenService {
         return "I couldn't find enough data to compare these tokens. Please try with different tokens.";
       }
 
-      // Use AI to compare the tokens
       const comparison = await this.aiRepository.compareTokens(
         query,
         validTokensData
       );
+
+      await this.logQuery({
+        userId: payload.from.id.toString(),
+        response: comparison,
+        command: "general",
+        tokenAddress: undefined,
+        chainId: undefined,
+        tokenId: undefined,
+        tokenName: undefined,
+      });
+
+      setCachedData(cacheKey, comparison, 300);
 
       return comparison;
     } catch (error) {
@@ -200,10 +291,40 @@ export class TokenService {
     }
   }
 
-  async getMarketTrends(): Promise<string> {
+  async getMarketTrends(payload: any): Promise<string> {
     try {
+      const cacheKey = `market_trends_${
+        new Date().toISOString().split("T")[0]
+      }`;
+      const cachedToken = getCachedData<string>(cacheKey);
+      if (cachedToken) {
+        logger.info(`Cache hit for market trends: ${cacheKey}`);
+        await this.logQuery({
+          userId: payload.from.id.toString(),
+          response: cachedToken,
+          command: "general",
+          tokenAddress: undefined,
+          chainId: undefined,
+          tokenId: undefined,
+          tokenName: undefined,
+        });
+        return cachedToken;
+      }
+
       const data = await this.coinGeckoRepository.getTrendingTokens();
       const trends = await this.aiRepository.analyzeMarketTrends(data);
+
+      await this.logQuery({
+        userId: payload.from.id.toString(),
+        response: trends,
+        command: "general",
+        tokenAddress: undefined,
+        chainId: undefined,
+        tokenId: undefined,
+        tokenName: undefined,
+      });
+
+      setCachedData(cacheKey, trends, 300);
 
       return trends;
     } catch (error) {
@@ -230,8 +351,34 @@ export class TokenService {
 
   async answerTokenQuestion(
     question: string,
-    tokenData: any[]
+    tokenData: any[],
+    payload: any
   ): Promise<string> {
+    const cacheKey = `token_question_${question
+      .toLowerCase()
+      .replace(/\s+/g, "_")}`;
+    const cachedToken = getCachedData<string>(cacheKey);
+    if (cachedToken) {
+      logger.info(`Cache hit for token question: ${cacheKey}`);
+      return cachedToken;
+    }
+
+    const response = await this.aiRepository.answerTokenQuestion(
+      question,
+      tokenData
+    );
+
+    setCachedData(cacheKey, response, 300);
+
+    await this.logQuery({
+      userId: payload.from.id.toString(),
+      response: response,
+      command: "general",
+      tokenAddress: undefined,
+      chainId: undefined,
+      tokenId: undefined,
+      tokenName: undefined,
+    });
     return this.aiRepository.answerTokenQuestion(question, tokenData);
   }
 
@@ -247,10 +394,10 @@ export class TokenService {
     userId: string;
     response: any;
     command: string;
-    tokenAddress: string | undefined;
-    chainId: string | undefined;
-    tokenId: string | undefined;
-    tokenName: string;
+    tokenAddress?: string | undefined;
+    chainId?: string | undefined;
+    tokenId?: string | undefined;
+    tokenName?: string | undefined;
   }): Promise<void> {
     await this.queryLogRepository.logQuery({
       userId,
@@ -258,7 +405,7 @@ export class TokenService {
       tokenAddress,
       chainId,
       tokenId,
-      tokenName,
+      tokenName: tokenName ?? "",
       response,
     });
   }
