@@ -81,6 +81,25 @@ export class TelegramHandlers {
     }
   }
 
+  async handleGeneralQuestion(ctx: Context, question: string): Promise<void> {
+    console.log("question", question);
+    const cacheKey = `bot_response_question_${question}`;
+    const cachedResponse = getCachedData<string>(cacheKey);
+    if (cachedResponse) {
+      logger.info(`Cache hit for bot response: ${cacheKey}`);
+      await ctx.reply(cachedResponse);
+      return;
+    }
+    if (!question) return;
+    try {
+      const response = await this.tokenService.getGeneralResponse(question);
+      setCachedData(cacheKey, response, 300);
+      await ctx.reply(response);
+    } catch (error) {
+      await ctx.reply((error as Error).message || "An error occurred.");
+    }
+  }
+
   async handleStart(ctx: Context): Promise<void> {
     await ctx.reply("Welcome to my space!");
   }
@@ -91,5 +110,171 @@ export class TelegramHandlers {
     - For any other queries, I'll do my best to assist you.
     `;
     await ctx.reply(response);
+  }
+
+  async handleTokenRecommendation(
+    ctx: Context,
+    category: string
+  ): Promise<void> {
+    try {
+      await ctx.replyWithChatAction("typing");
+      const cacheKey = `token_recommendation_${category
+        .toLowerCase()
+        .replace(/\s+/g, "_")}`;
+      const cachedResponse = getCachedData<string>(cacheKey);
+
+      if (cachedResponse) {
+        logger.info(`Cache hit for token recommendation: ${category}`);
+        await ctx.reply(cachedResponse);
+        return;
+      }
+
+      const recommendations = await this.tokenService.getTokenRecommendations();
+      const response = `🔍 Token Recommendations: \n\n${recommendations}`;
+      setCachedData(cacheKey, response, 7200);
+
+      await ctx.reply(response);
+    } catch (error) {
+      logger.error(
+        `Error handling token recommendation for ${category}`,
+        error
+      );
+      await ctx.reply(
+        "I couldn't generate token recommendations right now. Please try again later."
+      );
+    }
+  }
+
+  async handleTokenComparison(ctx: Context, query: string): Promise<void> {
+    try {
+      await ctx.replyWithChatAction("typing");
+      const tokenList = await this.tokenService.getTokenList();
+      const tokenSymbols = await this.tokenService.extractTokenSymbols(
+        query,
+        tokenList
+      );
+
+      console.log("tokenSymbols", tokenSymbols);
+
+      if (tokenSymbols.length < 2) {
+        await ctx.reply(
+          "Please specify your token mention, dont forget to add `$` sign."
+        );
+        return;
+      }
+
+      const comparison = await this.tokenService.compareTokens(
+        tokenSymbols,
+        query
+      );
+
+      console.log("comparison", comparison);
+
+      const response = `📊 Token Comparison\n\n${comparison}\n\n⚠️ *This comparison is based on real-time on-chain data. Not financial advice.*`;
+
+      await ctx.reply(response);
+    } catch (error) {
+      logger.error(`Error handling token comparison: ${query}`, error);
+      await ctx.reply(
+        "I couldn't compare these tokens right now. Please try again later."
+      );
+    }
+  }
+
+  async handleMarketTrends(ctx: Context): Promise<void> {
+    try {
+      await ctx.replyWithChatAction("typing");
+
+      const cacheKey = `market_trends_${
+        new Date().toISOString().split("T")[0]
+      }`;
+      const cachedResponse = getCachedData<string>(cacheKey);
+
+      if (cachedResponse) {
+        logger.info(`Cache hit for market trends`);
+        await ctx.reply(cachedResponse);
+        return;
+      }
+
+      const trends = await this.tokenService.getMarketTrends();
+
+      const response = `📈 Today's Crypto Market Trends\n\n${trends}\n\n⚠️ *This analysis is based on real-time market data. Not financial advice.*`;
+      setCachedData(cacheKey, response, 3600);
+
+      await ctx.reply(response);
+    } catch (error) {
+      logger.error("Error handling market trends", error);
+      await ctx.reply(
+        "I couldn't analyze market trends right now. Please try again later."
+      );
+    }
+  }
+
+  async handleTokenQuestion(ctx: Context, question: string): Promise<void> {
+    try {
+      await ctx.replyWithChatAction("typing");
+
+      const tokenList = await this.tokenService.getTokenList();
+      const tokenMentions = await this.tokenService.extractTokenSymbols(
+        question,
+        tokenList
+      );
+
+      console.log("tokenMentions", tokenMentions);
+
+      let response: string;
+
+      if (tokenMentions.length > 0) {
+        const tokensData = await Promise.all(
+          tokenMentions.map(async (symbol) => {
+            const dexScreenerData = await this.tokenService.getDexScreenerData(
+              symbol
+            );
+            const coinGeckoData = await this.tokenService.getCoinGeckoData(
+              symbol
+            );
+            return {
+              symbol,
+              dexScreener: dexScreenerData,
+              coinGecko: coinGeckoData,
+            };
+          })
+        );
+
+        const validTokensData = tokensData.filter(
+          (data) => data.dexScreener !== null || data.coinGecko !== null
+        );
+
+        if (validTokensData.length > 0) {
+          if (
+            validTokensData.length > 1 &&
+            question.toLowerCase().includes("compare")
+          ) {
+            response = await this.tokenService.compareTokens(
+              validTokensData.map((data) => data.symbol),
+              question
+            );
+            response = `📊 Token Comparison\n\n${response}`;
+          } else {
+            response = await this.tokenService.answerTokenQuestion(
+              question,
+              validTokensData
+            );
+            response = `🔍 Token Analysis\n\n${response}`;
+          }
+        } else {
+          response = await this.tokenService.getGeneralResponse(question);
+        }
+      } else {
+        response = await this.tokenService.getGeneralResponse(question);
+      }
+
+      await ctx.reply(response);
+    } catch (error) {
+      logger.error(`Error handling token question: ${question}`, error);
+      await ctx.reply(
+        "I couldn't answer your question right now. Please try again later."
+      );
+    }
   }
 }

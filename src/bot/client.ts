@@ -20,12 +20,22 @@ export class TelegramBotClient {
       try {
         const result = await this.aiRepository.routeFunction(text);
 
+        console.log("Routing function:", result.function);
+
         if (result.function === "handlePriceQuery") {
           return await handlers.handlePriceQuery(ctx, result.args[0]);
         } else if (result.function === "handleTokenAddress") {
           return await handlers.handleTokenAddress(ctx, result.args[0]);
+        } else if (result.function === "handleMarketTrends") {
+          return await handlers.handleMarketTrends(ctx);
+        } else if (result.function === "handleTokenRecommendation") {
+          return await handlers.handleTokenRecommendation(ctx, result.args[0]);
+        } else if (result.function === "handleTokenComparison") {
+          return await handlers.handleTokenComparison(ctx, result.args[0]);
+        } else if (result.function === "handleTokenQuestion") {
+          return await handlers.handleTokenQuestion(ctx, result.args[0]);
         } else {
-          return await ctx.reply("Sorry, I couldn't understand your message.");
+          await ctx.reply("Sorry, I couldn't understand your message.");
         }
       } catch (err) {
         console.error("Routing error:", err);

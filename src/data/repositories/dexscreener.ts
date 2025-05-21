@@ -62,4 +62,36 @@ export class DexScreenerRepository {
       return null;
     }
   }
+
+  async getTopGainers(limit: number): Promise<any[]> {
+    try {
+      const response = await fetch(
+        `https://api.dexscreener.com/latest/dex/gainers`,
+        {
+          method: "GET",
+        }
+      );
+      const data: any = await response.json();
+      return data.pairs.slice(0, limit);
+    } catch (error) {
+      logger.error("Error fetching top gainers from DexScreener", error);
+      return [];
+    }
+  }
+
+  async getTopVolume(limit: number): Promise<any[]> {
+    try {
+      const response = await fetch(
+        `https://api.dexscreener.com/latest/dex/volume`,
+        {
+          method: "GET",
+        }
+      );
+      const data: any = await response.json();
+      return data.pairs.slice(0, limit);
+    } catch (error) {
+      logger.error("Error fetching top volume from DexScreener", error);
+      return [];
+    }
+  }
 }

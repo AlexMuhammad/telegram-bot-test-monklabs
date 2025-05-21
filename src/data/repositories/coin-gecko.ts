@@ -27,4 +27,36 @@ export class CoinGeckoRepository {
       return null;
     }
   }
+
+  async getTrendingTokens(): Promise<any[]> {
+    try {
+      const response = await fetch(
+        `https://api.coingecko.com/api/v3/search/trending`,
+        {
+          method: "GET",
+        }
+      );
+      const data: any = await response.json();
+      return data.coins;
+    } catch (error) {
+      console.error("Error fetching trending tokens from CoinGecko", error);
+      return [];
+    }
+  }
+
+  async getTokenList(): Promise<any[]> {
+    try {
+      const response = await fetch(
+        `https://api.coingecko.com/api/v3/coins/list`,
+        {
+          method: "GET",
+        }
+      );
+      const data: any = await response.json();
+      return data;
+    } catch (error) {
+      console.error("Error fetching token list from CoinGecko", error);
+      return [];
+    }
+  }
 }
